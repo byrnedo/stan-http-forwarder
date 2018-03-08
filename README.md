@@ -2,6 +2,28 @@
 
 Simple proxy between Nats-Streaming to Http endpoints.
 
+
+Set up subscriptions to separate subjects, forwarding these to specified http endpoints.
+
+## Features
+
+### Lightweight
+
+Few dependencies and simple code.
+
+### Rate Limiting
+
+Requests to endpoints are rate limited to avoid DDOS.
+
+### Custom Headers
+
+Can be set per endpoint.
+
+### Message Guarantees
+
+When `strategy` is set to `ack`, the forwarder will only ack to nat-streaming if the HTTP response status is in the `healthy-status` list.
+
+
 ## Config
 
 

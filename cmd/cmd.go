@@ -17,7 +17,7 @@ var (
 func init() {
 
 	var err error
-	confPath := flag.String("conf", "./config.hocon", "Path to yaml config file")
+	confPath := flag.String("conf", "./config.conf", "Path to yaml config file")
 	flag.Parse()
 
 

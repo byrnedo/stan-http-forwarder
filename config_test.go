@@ -6,7 +6,7 @@ import (
 
 func TestConfigLoad(t *testing.T) {
 
-	c , err := CreateConfig("./config.hocon")
+	c , err := CreateConfig("./config.conf")
 	if err != nil {
 		t.Fatal( err)
 	}
