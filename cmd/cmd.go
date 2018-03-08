@@ -7,6 +7,7 @@ import (
 	"os"
 	"syscall"
 	"os/signal"
+	"sync"
 )
 
 var (
@@ -46,6 +47,9 @@ func main() {
 
 	startExitSignalHandler()
 
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+
 	for _, sub := range config.Subscriptions {
 		fwder := &forwarder.Forwarder{
 			StanConfig:         config.Stan,
@@ -58,4 +62,6 @@ func main() {
 
 		forwarders = append(forwarders, fwder)
 	}
+
+	wg.Wait()
 }

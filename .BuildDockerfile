@@ -1,0 +1,12 @@
+FROM golang:1.9-alpine
+# vi: ft=dockerfile
+
+RUN apk update && apk add curl git bash make openssh-client && \
+     rm -rf /var/cache/apk/*
+
+
+RUN curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+
+
+CMD make
+
