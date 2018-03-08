@@ -6,7 +6,7 @@ import (
 	"github.com/nats-io/go-nats"
 	"github.com/nats-io/go-nats-streaming"
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"os"
 	"os/signal"
 	"sync"
@@ -16,9 +16,11 @@ import (
 var (
 	config     *forwarder.Config
 	forwarders []*forwarder.Forwarder
+	log *logrus.Logger
 )
 
 func init() {
+	log = logrus.New()
 
 	var err error
 	confPath := flag.String("conf", "./config.conf", "Path to yaml config file")
@@ -83,7 +85,7 @@ func main() {
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 
-	ctxLog := log.WithFields(log.Fields{
+	ctxLog := log.WithFields(logrus.Fields{
 
 		"clusterId":   config.Stan.ClusterId,
 		"clientId":    config.Stan.ClientId,
