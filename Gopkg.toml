@@ -36,3 +36,7 @@
 [[constraint]]
   name = "github.com/nats-io/go-nats-streaming"
   version = "0.3.4"
+
+[[constraint]]
+  name = "github.com/sirupsen/logrus"
+  version = "1.0.4"

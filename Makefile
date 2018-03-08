@@ -32,7 +32,7 @@ build: ## Builds a dynamic linked binary
 	go build
 
 buildstatic: ## Builds a static binary
-	@cd cmd && GO15VENDOREXPERIMENT=1 CGO_ENABLED=0 GOOS=linux go build -ldflags "-s" -a -installsuffix cgo -o cmd ./cmd.go
+	@GO15VENDOREXPERIMENT=1 CGO_ENABLED=0 GOOS=linux go build -ldflags "-s" -a -installsuffix cgo main.go
 
 buildstatic-in-docker: ## Builds a static binary using a docker build environment
 	$(call docker-run,"buildstatic")

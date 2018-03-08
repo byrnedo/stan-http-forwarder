@@ -1,11 +1,8 @@
 package forwarder
 
 import (
-	"log"
 	"github.com/nats-io/go-nats-streaming"
 	"time"
-	"github.com/nats-io/go-nats"
-	"github.com/pkg/errors"
 	"net/http"
 	"context"
 	"io/ioutil"
@@ -13,6 +10,7 @@ import (
 	"encoding/json"
 	"bytes"
 	"strings"
+	log "github.com/sirupsen/logrus"
 )
 const (
 	StrategyFireForget = "fire-forget"
@@ -20,9 +18,10 @@ const (
 )
 
 type Forwarder struct {
+	log *log.Entry
 	StanConfig
 	SubscriptionConfig
-	stanConn   stan.Conn
+	StanConn   stan.Conn
 	sub        stan.Subscription
 	httpClient *http.Client
 	ticker     *time.Ticker
@@ -35,17 +34,16 @@ func (f *Forwarder) makeHttpClient() *http.Client {
 
 func (f *Forwarder) Start() error {
 
+
+	f.log = log.WithFields(log.Fields{
+		"subject": f.SubscriptionConfig.Subject,
+	})
+
+	rate := f.RateLimitAsDuration()
+	f.log.Infof("throttling http requests to 1 / %s", rate)
 	f.httpClient = f.makeHttpClient()
-	f.ticker = time.NewTicker(f.RateLimitAsDuration())
+	f.ticker = time.NewTicker(rate)
 	f.throttle = make(chan time.Time, 1)
-
-	if f.stanConn != nil {
-		f.stanConn.Close()
-	}
-
-	if err := f.connect(); err != nil {
-		return err
-	}
 
 	go func() {
 		for t := range f.ticker.C {
@@ -61,37 +59,6 @@ func (f *Forwarder) Start() error {
 	}
 	return nil
 
-}
-
-func (f *Forwarder) connect() error {
-
-	natsOpts := nats.GetDefaultOptions()
-	natsOpts.AsyncErrorCB = func(c *nats.Conn, s *nats.Subscription, err error) {
-		log.Println("Got stan nats async error:", err)
-	}
-
-	natsOpts.DisconnectedCB = func(c *nats.Conn) {
-		log.Println("Stan Nats disconnected")
-	}
-
-	natsOpts.ReconnectedCB = func(c *nats.Conn) {
-		log.Println("Stan Nats reconnected")
-	}
-	natsOpts.Url = f.Url
-
-	natsCon, err := natsOpts.Connect()
-	if err != nil {
-		return errors.Wrap(err, "nats connect failed")
-	}
-	if f.stanConn, err = stan.Connect(
-		f.ClusterId,
-		f.ClientId,
-		stan.NatsConn(natsCon),
-	); err != nil {
-		return errors.Wrap(err, "stan connect failed")
-	}
-
-	return nil
 }
 
 type RequestPayload struct {
@@ -113,15 +80,27 @@ func (f *Forwarder) makeRequest(msg *stan.Msg) {
 
 	req, err := http.NewRequest("POST", f.Endpoint, data)
 	if err != nil {
-		log.Println("ERROR: ", err)
+		log.Error(err)
 		return
+	}
+
+	for _, fullHeader := range f.SubscriptionConfig.Headers {
+
+		splitH := strings.Split(fullHeader, ":")
+		if len(splitH) > 1 {
+			f.log.Debugf("setting header `%s`", splitH[0])
+			req.Header.Set(splitH[0], splitH[1])
+		}
 	}
 
 	ctx, _ := context.WithTimeout(context.Background(), f.Timeout)
 	req.WithContext(ctx)
+
+	f.log.WithField("url", f.Endpoint)
+	f.log.Debug("sending request")
 	resp, err := f.httpClient.Do(req)
 	if err != nil {
-		log.Println("ERROR: ", err)
+		log.Error(err)
 		return
 	}
 
@@ -155,14 +134,19 @@ func (f *Forwarder) makeRequest(msg *stan.Msg) {
 func (f *Forwarder) fwdFunc(msg *stan.Msg) {
 
 	<-f.throttle // rate limit
-	log.Printf("got msg on %s", msg.Subject)
+	f.log = f.log.WithFields(log.Fields{"seq": msg.Sequence})
+	f.log.Debug("got message")
 	go f.makeRequest(msg)
 }
 
 func (f *Forwarder) subscribe() error {
 
 	var err error
-	f.sub, err = f.stanConn.QueueSubscribe(
+
+
+	f.log.Info("subscribing...")
+
+	f.sub, err = f.StanConn.QueueSubscribe(
 		f.SubscriptionConfig.Subject,
 		f.StanConfig.QueueGroupName,
 		f.fwdFunc,
@@ -175,11 +159,12 @@ func (f *Forwarder) subscribe() error {
 		return err
 	}
 
+	f.log.Info("subscribed")
 	return nil
 }
 
 func (f *Forwarder) Stop() {
-	if f.stanConn != nil {
-		f.stanConn.Close()
+	if f.StanConn != nil {
+		f.StanConn.Close()
 	}
 }

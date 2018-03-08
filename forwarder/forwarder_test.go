@@ -48,13 +48,14 @@ func TestForwarder_Start(t *testing.T) {
 		},
 		SubscriptionConfig: SubscriptionConfig{
 			Subject:       "foo.bar",
-			RateLimit:     "1/1s",
+			RateLimit:     "5/1s",
 			Strategy:      "ack",
 			Endpoint:      "http://localhost:12345",
 			HealthyStatus: []int{200},
 			Headers:       []string{},
 			Timeout:       10 * time.Second,
 		},
+		StanConn: stanCon,
 	}
 
 	if err := f.Start(); err != nil {
@@ -62,8 +63,10 @@ func TestForwarder_Start(t *testing.T) {
 	}
 
 
-	if err := stanCon.Publish("foo.bar", []byte("some data")); err != nil {
-		t.Fatal(err)
+	for i:=0; i<10; i++ {
+		if err := stanCon.Publish("foo.bar", []byte("some data")); err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	time.Sleep(1*time.Second)
