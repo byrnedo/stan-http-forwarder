@@ -1,0 +1,45 @@
+forwarder {
+    stan {
+      url = "<stan url>"
+      cluster-id = "<cluster>"
+      client-id = "<client id>"
+      durable-name = "<dur name>"
+      queue-group-name ="<group name>"
+    }
+
+    defaults {
+      strategy = ack
+      rate-limit = "10/1s"
+      timeout= 5s
+    }
+
+    subscriptions = [
+      {
+          subject= foo.bar
+          rate-limit= "50/1m"
+          strategy= ack
+          endpoint= "http://testfoobar.com"
+          healthy-status= [ 200 ]
+          headers= [
+            "Header1",
+            "Header2",
+            "Header3"
+            ]
+      },
+      {
+          subject= foo.bar.baz
+          strategy= fire-forget
+          endpoint= "http://testfoobarbaz.com"
+          timeout= 10s
+          healthy-status=[200]
+          headers= [
+            "Header1",
+            "Header2",
+            "Header3"
+          ]
+      }
+    ]
+}
+
+
+
