@@ -169,7 +169,7 @@ func (f *Forwarder) subscribe() error {
 }
 
 func (f *Forwarder) Stop() {
-	if f.StanConn != nil {
-		f.StanConn.Close()
+	if f.sub != nil {
+		f.sub.Close()
 	}
 }
