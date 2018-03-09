@@ -24,38 +24,82 @@ Can be set per endpoint.
 When `strategy` is set to `ack`, the forwarder will only ack to nat-streaming if the HTTP response status is in the `healthy-status` list.
 
 
+## Usage 
+
+`shf -conf ./path.to.config.file`
+
 ## Config
 
+This project uses [byrnedo/typesafe-config](https://github.com/byrnedo/typesafe-config), which is a `hocon` format config file reader.
 
-```yaml
-stan:
-  url: <nats streaming url>
-  user: <nats streaming user>
-  pass: <nats streaming pass>
 
-defaults:
-  rate: 10/1s # Format: rate/duration. In this case 10 requests per second
-  timeout: 5s # Timeout for http requests
+*Example*
 
-subscriptions: # List of subscriptions to stan topics
-  - foo.bar: # Stan topic
-      rate: 50/1m # Override rate limit
-      strategy: ack # Web request strategy, either 'ack' or 'fire-forget'. 'Ack' results in message retry until a healthy status
-      endpoint: http://testfoobar.com # Http url
-      healthy-status: # List of statuses to consider healthy, useful with 'ack' strategy
-        - 200
-      headers: # Custom Http headers
-        - Header1
-        - Header2
-        - Header3
-  - foo.bar.baz:
-      strategy: fire-forget
-      endpoint: http://testfoobarbaz.com
-      timeout: 10s
-      healthy-status:
-        - 200
-      headers:
-        - Header1
-        - Header2
-        - Header3
+```hocon
+forwarder {
+    stan {
+      url = "nats://localhost:4222"
+      cluster-id = "<cluster>"
+      client-id = "<client id>"
+      durable-name = "<dur name>"
+      queue-group-name ="<group name>"
+    }
+
+    defaults {
+      strategy = ack
+      rate-limit = "10/1s"
+      timeout= 5s
+    }
+
+    subscriptions = [
+      {
+          subject= foo.bar
+          rate-limit= "50/1m"
+          strategy= ack
+          endpoint= "http://testfoobar.com"
+          healthy-status= [ 200 ]
+          headers= [
+            "Header1",
+            "Header2",
+            "Header3"
+            ]
+      },
+      {
+          subject= foo.bar.baz
+          strategy= fire-forget
+          endpoint= "http://testfoobarbaz.com"
+          timeout= 10s
+          healthy-status=[200]
+          headers= [
+            "Header1",
+            "Header2",
+            "Header3"
+          ]
+      }
+    ]
+}
 ```
+
+#### Env Substitution
+
+Soft override (only override if env exists):
+
+```hocon
+key = "default"
+key = ${?SOME_OVERRIDE_ENV}
+```
+
+Hard override
+
+```hocon
+key = ${SOME_OVERRIDE_ENV}
+```
+
+## Message Format
+
+The http request made is always a "POST" request. 
+The body of the request is the `MsgProto.Data` payload of the stan message.
+Meta data is sent in the following headers:
+
+- Stan-Subject 
+- Stan-Sequence
