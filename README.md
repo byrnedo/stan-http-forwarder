@@ -1,9 +1,6 @@
 # STAN HTTP Proxy
 
-Simple proxy between Nats-Streaming to Http endpoints.
-
-
-Set up subscriptions to separate subjects, forwarding these to specified http endpoints.
+Simple service/package to forward Nats-Streaming messages to HTTP endpoints.
 
 ## Features
 
