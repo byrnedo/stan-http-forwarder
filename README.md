@@ -2,6 +2,27 @@
 
 Simple service/package to forward Nats-Streaming messages to HTTP endpoints.
 
+```
+             +--------------+
+             |              |
+             |              |
+             |  HTTP API    |
+             |              |
+             |              |     +-----------+
+             |              <-----+           |
+             +--------------+     |           |
+                                  |  Stan-Http|Forwarder
+                                  |           |
+                                  |           |
+                                  +-----^-----+
+                                        |
+                                        |
+                                        |
++---------------------------------------+----------------------------------->
+                                Nats Streaming Subject
+
+```
+
 ## Features
 
 ### Lightweight
