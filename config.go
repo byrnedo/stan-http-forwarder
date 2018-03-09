@@ -9,6 +9,8 @@ import (
 
 type SubscriptionConfig struct {
 	Subject       string
+	DurableName   string
+	QueueGroup    string
 	RateLimit     string
 	Strategy      string
 	Endpoint      string
@@ -31,17 +33,17 @@ func (sc *SubscriptionConfig) RateLimitAsDuration() time.Duration {
 }
 
 type SubscriptionDefaultConfig struct {
-	Strategy string
+	Strategy  string
 	RateLimit string
 	Timeout   time.Duration
+	DurableName string `config:",stan-http-forwarder"`
+	QueueGroup string `config:",stan-http-forwarder"`
 }
 
 type StanConfig struct {
-	Url            string
-	ClientId       string
-	ClusterId      string
-	DurableName    string
-	QueueGroupName string
+	Url       string
+	ClientId  string
+	ClusterId string `config:",test-cluster"`
 }
 
 type Config struct {
@@ -66,6 +68,14 @@ func (c *Config) propagateDefaults() {
 
 		if sub.Strategy == "" {
 			sub.Strategy = c.Defaults.Strategy
+		}
+
+		if sub.QueueGroup == "" {
+			sub.QueueGroup = c.Defaults.QueueGroup
+		}
+
+		if sub.DurableName == "" {
+			sub.DurableName = c.Defaults.DurableName
 		}
 
 		c.Subscriptions[idx] = sub

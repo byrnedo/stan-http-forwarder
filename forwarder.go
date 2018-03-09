@@ -9,16 +9,17 @@ import (
 	"io"
 	"bytes"
 	"strings"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"fmt"
 )
+
 const (
 	StrategyFireForget = "fire-forget"
-	StrategyACK = "ack"
+	StrategyACK        = "ack"
 )
 
 type Forwarder struct {
-	log *log.Entry
+	log        *logrus.Entry
 	StanConfig
 	SubscriptionConfig
 	StanConn   stan.Conn
@@ -34,9 +35,11 @@ func (f *Forwarder) makeHttpClient() *http.Client {
 
 func (f *Forwarder) Start() error {
 
-	f.log = log.New().WithFields(log.Fields{
-		"subject": f.SubscriptionConfig.Subject,
-		"endpoint": f.SubscriptionConfig.Endpoint,
+	f.log = logrus.New().WithFields(logrus.Fields{
+		"subject":     f.SubscriptionConfig.Subject,
+		"endpoint":    f.SubscriptionConfig.Endpoint,
+		"durableName": f.DurableName,
+		"queueGroup":  f.QueueGroup,
 	})
 
 	rate := f.RateLimitAsDuration()
@@ -61,12 +64,11 @@ func (f *Forwarder) Start() error {
 
 }
 
-
-func (f *Forwarder) makeHeaders(msg *stan.Msg) (headers map[string] string) {
+func (f *Forwarder) makeHeaders(msg *stan.Msg) (headers map[string]string) {
 
 	headers = map[string]string{
-		"Stan-Seq": fmt.Sprintf("%d", msg.Sequence),
-		"Stan-Subject": msg.Subject,
+		"Stan-Seq":       fmt.Sprintf("%d", msg.Sequence),
+		"Stan-Subject":   msg.Subject,
 		"Stan-Timestamp": fmt.Sprintf("%d", msg.Timestamp),
 	}
 
@@ -81,8 +83,9 @@ func (f *Forwarder) makeHeaders(msg *stan.Msg) (headers map[string] string) {
 	return
 }
 
-
 func (f *Forwarder) makeRequest(msg *stan.Msg) {
+
+	log := f.log.WithField("url", f.Endpoint)
 
 	var ackSent bool
 	data := bytes.NewBuffer(msg.MsgProto.Data)
@@ -94,15 +97,14 @@ func (f *Forwarder) makeRequest(msg *stan.Msg) {
 	}
 
 	for k, v := range f.makeHeaders(msg) {
-			f.log.Debugf("setting header `%s`", k)
-			req.Header.Set(k, v)
+		log.Debugf("setting header `%s`", k)
+		req.Header.Set(k, v)
 	}
 
 	ctx, _ := context.WithTimeout(context.Background(), f.Timeout)
 	req.WithContext(ctx)
 
-	f.log.WithField("url", f.Endpoint)
-	f.log.Debug("sending request")
+	log.Debug("sending request")
 	resp, err := f.httpClient.Do(req)
 	if err != nil {
 		log.Error(err)
@@ -139,7 +141,7 @@ func (f *Forwarder) makeRequest(msg *stan.Msg) {
 func (f *Forwarder) fwdFunc(msg *stan.Msg) {
 
 	<-f.throttle // rate limit
-	f.log = f.log.WithFields(log.Fields{"seq": msg.Sequence})
+	f.log = f.log.WithField("seq", msg.Sequence)
 	f.log.Debug("got message")
 	go f.makeRequest(msg)
 }
@@ -148,16 +150,15 @@ func (f *Forwarder) subscribe() error {
 
 	var err error
 
-
 	f.log.Info("subscribing...")
 
 	f.sub, err = f.StanConn.QueueSubscribe(
-		f.SubscriptionConfig.Subject,
-		f.StanConfig.QueueGroupName,
+		f.Subject,
+		f.QueueGroup,
 		f.fwdFunc,
 		stan.DurableName(f.DurableName),
 		stan.SetManualAckMode(),
-		stan.AckWait(f.SubscriptionConfig.Timeout+1*time.Second),
+		stan.AckWait(f.Timeout+1*time.Second),
 	)
 
 	if err != nil {

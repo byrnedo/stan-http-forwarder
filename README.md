@@ -13,7 +13,7 @@ Few dependencies and simple code.
 
 ### Rate Limiting
 
-Requests to endpoints are rate limited to avoid DDOS.
+Requests to endpoints are rate limited to avoid accidental spamming.
 
 ### Custom Headers
 
@@ -28,6 +28,11 @@ When `strategy` is set to `ack`, the forwarder will only ack to nat-streaming if
 
 `shf -conf ./path.to.config.file`
 
+
+## Docker
+
+Image available as 
+
 ## Config
 
 This project uses [byrnedo/typesafe-config](https://github.com/byrnedo/typesafe-config), which is a `hocon` format config file reader.
@@ -41,14 +46,14 @@ forwarder {
       url = "nats://localhost:4222"
       cluster-id = "<cluster>"
       client-id = "<client id>"
-      durable-name = "<dur name>"
-      queue-group-name ="<group name>"
     }
 
     defaults {
       strategy = ack
       rate-limit = "10/1s"
       timeout= 5s
+      durable-name = "<dur name>"
+      queue-group ="<group name>"
     }
 
     subscriptions = [
@@ -66,6 +71,8 @@ forwarder {
       },
       {
           subject= foo.bar.baz
+          durable-name = "<dur name>"
+          queue-group ="<group name>"
           strategy= fire-forget
           endpoint= "http://testfoobarbaz.com"
           timeout= 10s

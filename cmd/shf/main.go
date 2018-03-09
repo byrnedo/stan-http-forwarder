@@ -93,8 +93,6 @@ func main() {
 
 		"clusterId":   config.Stan.ClusterId,
 		"clientId":    config.Stan.ClientId,
-		"durableName": config.Stan.DurableName,
-		"queueGroup":  config.Stan.QueueGroupName,
 	})
 
 	ctxLog.Info("connecting...")

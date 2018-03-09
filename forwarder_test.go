@@ -9,6 +9,7 @@ import (
 	"github.com/nats-io/go-nats"
 	"net/http"
 	"io/ioutil"
+	"sync"
 )
 
 func initStan(stanUrl string, t *testing.T) stan.Conn {
@@ -16,7 +17,7 @@ func initStan(stanUrl string, t *testing.T) stan.Conn {
 	natsOpts := nats.GetDefaultOptions()
 	natsOpts.Url = stanUrl
 
-	nc,err := natsOpts.Connect()
+	nc, err := natsOpts.Connect()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -40,6 +41,8 @@ func TestForwarder_Start(t *testing.T) {
 	stanCon := initStan(stanUrl, t)
 
 	mux := http.NewServeMux()
+	wg := sync.WaitGroup{}
+
 	handleFunc := func(w http.ResponseWriter, r *http.Request) {
 		b, _ := ioutil.ReadAll(r.Body)
 		sub := r.Header.Get("Stan-Subject")
@@ -56,25 +59,25 @@ func TestForwarder_Start(t *testing.T) {
 		if len(b) == 0 {
 			t.Fatal("missing body")
 		}
+		wg.Done()
 	}
 	mux.HandleFunc("/", handleFunc)
 
-	go func(){
+	go func() {
 		if err := http.ListenAndServe("localhost:12345", mux); err != nil {
 			t.Fatal(err)
 		}
 	}()
 
-
 	f := &Forwarder{
-		StanConfig:         StanConfig{
-			Url:            stanUrl,
-			ClientId:       "s-h-f-test",
-			ClusterId:      "test-cluster",
-			DurableName:    "s-h-f",
-			QueueGroupName: "s-h-f",
+		StanConfig: StanConfig{
+			Url:       stanUrl,
+			ClientId:  "s-h-f-test",
+			ClusterId: "test-cluster",
 		},
 		SubscriptionConfig: SubscriptionConfig{
+			DurableName:   "s-h-f",
+			QueueGroup:    "s-h-f",
 			Subject:       "foo.bar",
 			RateLimit:     "5/1s",
 			Strategy:      "ack",
@@ -90,15 +93,15 @@ func TestForwarder_Start(t *testing.T) {
 		t.Fatal(err)
 	}
 
-
-	for i:=0; i<10; i++ {
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
 		if err := stanCon.Publish("foo.bar", []byte("some data")); err != nil {
 			t.Fatal(err)
 		}
 	}
 
-	time.Sleep(1*time.Second)
-
+	// TODO - add timeout
+	wg.Wait()
 
 	f.Stop()
 }
