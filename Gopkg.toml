@@ -22,21 +22,17 @@
 
 
 [[constraint]]
-  branch = "master"
-  name = "github.com/zpatrick/go-config"
-
-[[constraint]]
   name = "github.com/byrnedo/typesafe-config"
   version = "^0.1.0"
 
 [[constraint]]
   name = "github.com/pkg/errors"
-  version = "0.8.0"
+  version = "^0.8.0"
 
 [[constraint]]
   name = "github.com/nats-io/go-nats-streaming"
-  version = "0.3.4"
+  version = "^0.3.4"
 
 [[constraint]]
   name = "github.com/sirupsen/logrus"
-  version = "1.0.4"
+  version = "^1.0.4"

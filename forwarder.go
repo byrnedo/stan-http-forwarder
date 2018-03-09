@@ -7,10 +7,10 @@ import (
 	"context"
 	"io/ioutil"
 	"io"
-	"encoding/json"
 	"bytes"
 	"strings"
 	log "github.com/sirupsen/logrus"
+	"fmt"
 )
 const (
 	StrategyFireForget = "fire-forget"
@@ -34,13 +34,13 @@ func (f *Forwarder) makeHttpClient() *http.Client {
 
 func (f *Forwarder) Start() error {
 
-
-	f.log = log.WithFields(log.Fields{
+	f.log = log.New().WithFields(log.Fields{
 		"subject": f.SubscriptionConfig.Subject,
+		"endpoint": f.SubscriptionConfig.Endpoint,
 	})
 
 	rate := f.RateLimitAsDuration()
-	f.log.Infof("throttling http requests to 1 / %s", rate)
+	f.log.Infof("throttling http requests to 1/%s", rate)
 	f.httpClient = f.makeHttpClient()
 	f.ticker = time.NewTicker(rate)
 	f.throttle = make(chan time.Time, 1)
@@ -61,22 +61,31 @@ func (f *Forwarder) Start() error {
 
 }
 
-type RequestPayload struct {
-	Subject string `json:"topic"`
-	Sequence int `json:"sequence"`
+
+func (f *Forwarder) makeHeaders(msg *stan.Msg) (headers map[string] string) {
+
+	headers = map[string]string{
+		"Stan-Seq": fmt.Sprintf("%d", msg.Sequence),
+		"Stan-Subject": msg.Subject,
+		"Stan-Timestamp": fmt.Sprintf("%d", msg.Timestamp),
+	}
+
+	for _, fullHeader := range f.SubscriptionConfig.Headers {
+
+		splitH := strings.Split(fullHeader, ":")
+		if len(splitH) > 1 {
+			headers[splitH[0]] = splitH[1]
+		}
+	}
+
+	return
 }
 
-func makePayload(msg *stan.Msg) io.Reader {
-
-	bodyBuffer := new(bytes.Buffer)
-	json.NewEncoder(bodyBuffer).Encode(msg.MsgProto)
-	return bodyBuffer
-}
 
 func (f *Forwarder) makeRequest(msg *stan.Msg) {
 
 	var ackSent bool
-	data := makePayload(msg)
+	data := bytes.NewBuffer(msg.MsgProto.Data)
 
 	req, err := http.NewRequest("POST", f.Endpoint, data)
 	if err != nil {
@@ -84,13 +93,9 @@ func (f *Forwarder) makeRequest(msg *stan.Msg) {
 		return
 	}
 
-	for _, fullHeader := range f.SubscriptionConfig.Headers {
-
-		splitH := strings.Split(fullHeader, ":")
-		if len(splitH) > 1 {
-			f.log.Debugf("setting header `%s`", splitH[0])
-			req.Header.Set(splitH[0], splitH[1])
-		}
+	for k, v := range f.makeHeaders(msg) {
+			f.log.Debugf("setting header `%s`", k)
+			req.Header.Set(k, v)
 	}
 
 	ctx, _ := context.WithTimeout(context.Background(), f.Timeout)

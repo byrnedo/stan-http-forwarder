@@ -26,12 +26,6 @@
   version = "0.1.5"
 
 [[projects]]
-  branch = "master"
-  name = "github.com/byrnedo/stan-http-forwarder"
-  packages = ["."]
-  revision = "8502cc74de66b3a2e4405bd911b254d662e70106"
-
-[[projects]]
   name = "github.com/byrnedo/typesafe-config"
   packages = ["parse"]
   revision = "f3443913dd30d7caf07a57ba35cf73a2ec076464"
@@ -148,6 +142,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "659f1f15e2fe20f79f02d6acd32d74eba858c3df02f28e23b1022229bbff4efe"
+  inputs-digest = "28c46c748eb0915524de9ba792a82fadf433dc69bbeee77a5f1913446cda8140"
   solver-name = "gps-cdcl"
   solver-version = 1

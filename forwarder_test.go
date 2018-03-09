@@ -7,6 +7,8 @@ import (
 
 	"github.com/nats-io/go-nats-streaming"
 	"github.com/nats-io/go-nats"
+	"net/http"
+	"io/ioutil"
 )
 
 func initStan(stanUrl string, t *testing.T) stan.Conn {
@@ -36,6 +38,32 @@ func TestForwarder_Start(t *testing.T) {
 	}
 
 	stanCon := initStan(stanUrl, t)
+
+	mux := http.NewServeMux()
+	handleFunc := func(w http.ResponseWriter, r *http.Request) {
+		b, _ := ioutil.ReadAll(r.Body)
+		sub := r.Header.Get("Stan-Subject")
+		seq := r.Header.Get("Stan-Seq")
+
+		if sub == "" {
+			t.Fatal("missing subject header	")
+		}
+
+		if seq == "" {
+			t.Fatal("missing sequence header")
+		}
+
+		if len(b) == 0 {
+			t.Fatal("missing body")
+		}
+	}
+	mux.HandleFunc("/", handleFunc)
+
+	go func(){
+		if err := http.ListenAndServe("localhost:12345", mux); err != nil {
+			t.Fatal(err)
+		}
+	}()
 
 
 	f := &Forwarder{

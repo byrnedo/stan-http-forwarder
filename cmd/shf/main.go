@@ -2,7 +2,7 @@ package main
 
 import (
 	"flag"
-	"github.com/byrnedo/stan-http-forwarder/forwarder"
+	"github.com/byrnedo/stan-http-forwarder"
 	"github.com/nats-io/go-nats"
 	"github.com/nats-io/go-nats-streaming"
 	"github.com/pkg/errors"
@@ -16,8 +16,27 @@ import (
 var (
 	config     *forwarder.Config
 	forwarders []*forwarder.Forwarder
-	log *logrus.Logger
+	log        *logrus.Logger
 )
+
+func exitHandler(stanConn stan.Conn) {
+	log.Info("caught exit signal, closing connections")
+	for _, fwder := range forwarders {
+		fwder.Stop()
+	}
+	stanConn.Close()
+	os.Exit(1)
+}
+
+func startExitSignalHandler(stanConn stan.Conn) {
+	c := make(chan os.Signal, 2)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		//block until signal
+		<-c
+		exitHandler(stanConn)
+	}()
+}
 
 func init() {
 	log = logrus.New()
@@ -31,21 +50,6 @@ func init() {
 		log.Fatal(err)
 	}
 
-}
-
-func startExitSignalHandler(stanConn stan.Conn) {
-	c := make(chan os.Signal, 2)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-	go func() {
-		//block until signal
-		<-c
-		log.Info("caught exit signal, closing connections")
-		for _, fwder := range forwarders {
-			fwder.Stop()
-		}
-		stanConn.Close()
-		os.Exit(1)
-	}()
 }
 
 func connectToStan(sc forwarder.StanConfig) (stan.Conn, error) {
@@ -98,6 +102,10 @@ func main() {
 	ctxLog.Info("connected")
 
 	startExitSignalHandler(stanCon)
+
+	logrus.RegisterExitHandler(func() {
+		exitHandler(stanCon)
+	})
 
 	if err != nil {
 		log.Fatal(err)
