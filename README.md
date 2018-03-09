@@ -6,13 +6,13 @@ Simple service/package to forward Nats-Streaming messages to HTTP endpoints.
              +--------------+
              |              |
              |              |
-             |  HTTP API    |
+             |   HTTP API   |
              |              |
              |              |     +-----------+
              |              <-----+           |
              +--------------+     |           |
-                                  |  Stan-Http|Forwarder
-                                  |           |
+                                  | Stan Http |
+                                  | Forwarder |
                                   |           |
                                   +-----^-----+
                                         |
