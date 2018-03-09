@@ -129,6 +129,9 @@ func (f *Forwarder) makeRequest(msg *stan.Msg) {
 		}
 	}
 	if ! ok {
+		bodyPreview := make([]byte,256)
+		_, _ = resp.Body.Read(bodyPreview)
+		log.Warningf("response body: %s", string(bodyPreview))
 		return
 	}
 
