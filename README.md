@@ -1,4 +1,4 @@
-# STAN HTTP Proxy
+# STAN HTTP Forwarder
 
 Simple service/package to forward Nats-Streaming messages to HTTP endpoints.
 
