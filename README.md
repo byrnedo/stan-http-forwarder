@@ -31,7 +31,9 @@ When `strategy` is set to `ack`, the forwarder will only ack to nat-streaming if
 
 ## Docker
 
-Image available as 
+Image available as [byrnedo/stan-http-forwarder](https://hub.docker.com/r/byrnedo/stan-http-forwarder/)
+
+Allows passing of a `CONFIG` env that act as the whole config file.
 
 ## Config
 
