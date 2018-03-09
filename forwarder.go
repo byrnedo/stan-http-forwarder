@@ -85,7 +85,7 @@ func (f *Forwarder) makeHeaders(msg *stan.Msg) (headers map[string]string) {
 
 func (f *Forwarder) makeRequest(msg *stan.Msg) {
 
-	log := f.log.WithField("url", f.Endpoint)
+	log := f.log
 
 	var ackSent bool
 	data := bytes.NewBuffer(msg.MsgProto.Data)
@@ -122,6 +122,7 @@ func (f *Forwarder) makeRequest(msg *stan.Msg) {
 	}()
 
 	ok := false
+	log = log.WithField("status", resp.StatusCode)
 	for _, goodStatus := range f.HealthyStatus {
 		if resp.StatusCode == goodStatus {
 			ok = true
@@ -131,14 +132,15 @@ func (f *Forwarder) makeRequest(msg *stan.Msg) {
 	if ! ok {
 		bodyPreview := make([]byte,256)
 		_, _ = resp.Body.Read(bodyPreview)
-		log.Warningf("response body: %s", string(bodyPreview))
+		log.Errorf("response body: %s", string(bodyPreview))
 		return
 	}
+
 
 	if !ackSent {
 		msg.Ack()
 	}
-
+	log.Info("message sent")
 }
 
 func (f *Forwarder) fwdFunc(msg *stan.Msg) {
